@@ -32,10 +32,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/converteverything/converteverything-mcp.git"
+    "url": "https://github.com/RookieKiwi/converteverything-mcp.git"
   },
   "bugs": {
-    "url": "https://github.com/converteverything/converteverything-mcp/issues"
+    "url": "https://github.com/RookieKiwi/converteverything-mcp/issues"
   },
   "homepage": "https://converteverything.io",
   "engines": {
