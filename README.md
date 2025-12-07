@@ -1,6 +1,6 @@
 # ConvertEverything MCP Server
 
-An MCP (Model Context Protocol) server that enables AI assistants like Claude to convert files between 93+ formats using the [ConvertEverything.io](https://converteverything.io) API.
+An MCP (Model Context Protocol) server that enables AI assistants like Claude to convert files between 100+ formats using the [ConvertEverything.io](https://converteverything.io) API.
 
 > **"Hey Claude, convert this HEIC to JPG"** — it's that simple.
 
@@ -16,7 +16,7 @@ Tired of sketchy converter websites with popup ads and "premium" upsells? We bui
 
 ## Features
 
-- **93+ Supported Formats**: Audio, video, image, document, ebook, data, 3D, font, archive, and CAD files
+- **100+ Supported Formats**: Audio, video, image (including RAW camera formats), document, ebook, data, 3D, font, archive, and CAD files
 - **Simple Integration**: Works with Claude Desktop, Claude Code, and any MCP-compatible client
 - **Conversion Options**: Fine-tune output quality, resolution, bitrate, and more
 - **Secure**: Uses your personal API key, no data stored on third-party servers beyond conversion processing
@@ -44,15 +44,17 @@ Browse all [audio converters](https://converteverything.io/audio-converters), [v
 
 | Category | Formats |
 |----------|---------|
-| **Audio** | mp3, wav, flac, aac, ogg, m4a, wma, aiff, midi, opus, ac3, amr, ape |
-| **Video** | mp4, avi, mkv, mov, webm, wmv, flv, m4v, 3gp, ts, vob, mts, mpeg, m2ts, divx |
-| **Image** | jpg, jpeg, png, gif, webp, bmp, tiff, svg, ico, heic |
-| **Document** | pdf, docx, doc, xlsx, xls, pptx, ppt, txt, md, html, rtf, odt |
-| **Ebook** | epub, mobi, azw3 |
-| **Data** | json, csv, xml, yaml, tsv |
-| **3D** | obj, stl, ply, gltf, glb, dae, fbx, 3ds, blend, usdz, step, iges, ifc |
-| **Font** | ttf, otf, woff, woff2, eot |
-| **Archive** | zip, tar, gz, bz2, 7z |
+| **Audio** (15) | mp3, wav, flac, aac, ogg, ogx, m4a, wma, aiff, midi, mid, opus, ac3, amr, ape |
+| **Video** (15) | mp4, avi, mkv, mov, webm, wmv, flv, m4v, 3gp, ts, vob, mts, mpeg, m2ts, divx |
+| **Image** (25) | jpg, jpeg, png, gif, webp, bmp, tiff, svg, ico, prn, heic, heif, avif, + RAW formats |
+| **RAW Camera** | cr2, cr3, nef, nrw, arw, orf, rw2, raf, dng, pef, raw (read-only input) |
+| **Document** (17) | pdf, docx, doc, xlsx, xls, pptx, ppt, txt, md, html, rtf, odt, odp, ods, docm, xlsm |
+| **Ebook** (4) | epub, mobi, azw3, pdf |
+| **Data** (6) | json, csv, xml, yaml, yml, tsv |
+| **3D** (9) | obj, stl, ply, gltf, glb, dae, off, fbx, 3ds |
+| **Font** (5) | ttf, otf, woff, woff2, eot |
+| **Archive** (5) | zip, tar, gz, bz2, 7z |
+| **CAD** (1) | dxf |
 
 ## Requirements
 

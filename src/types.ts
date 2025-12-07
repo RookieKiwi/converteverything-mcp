@@ -256,36 +256,39 @@ export const FORMAT_CATEGORY_DESCRIPTIONS: Record<FormatCategory, string> = {
 };
 
 export const FORMAT_CATEGORIES: Record<string, FormatCategory> = {
-  // Audio
+  // Audio (15 formats)
   mp3: "audio", wav: "audio", flac: "audio", aac: "audio", ogg: "audio",
-  m4a: "audio", wma: "audio", aiff: "audio", midi: "audio", mid: "audio",
-  opus: "audio", ac3: "audio", amr: "audio", ape: "audio",
-  // Video
+  ogx: "audio", m4a: "audio", wma: "audio", aiff: "audio", midi: "audio",
+  mid: "audio", opus: "audio", ac3: "audio", amr: "audio", ape: "audio",
+  // Video (15 formats)
   mp4: "video", avi: "video", mkv: "video", mov: "video", webm: "video",
   wmv: "video", flv: "video", m4v: "video", "3gp": "video", ts: "video",
   vob: "video", mts: "video", mpeg: "video", m2ts: "video", divx: "video",
-  // Image
+  // Image (25 formats including RAW camera formats)
   jpg: "image", jpeg: "image", png: "image", gif: "image", webp: "image",
-  bmp: "image", tiff: "image", tif: "image", svg: "image", ico: "image", heic: "image",
-  // Document
+  bmp: "image", tiff: "image", tif: "image", svg: "image", ico: "image",
+  prn: "image", heic: "image", heif: "image", avif: "image",
+  // RAW camera formats (read-only, can convert FROM these)
+  cr2: "image", cr3: "image", nef: "image", nrw: "image", arw: "image",
+  orf: "image", rw2: "image", raf: "image", dng: "image", pef: "image", raw: "image",
+  // Document (17 formats)
   pdf: "document", docx: "document", doc: "document", xlsx: "document",
   xls: "document", pptx: "document", ppt: "document", txt: "document",
   md: "document", html: "document", htm: "document", rtf: "document",
   odt: "document", odp: "document", ods: "document", docm: "document",
   xlsm: "document",
-  // Ebook
+  // Ebook (4 formats - pdf is also in ebook category)
   epub: "ebook", mobi: "ebook", azw3: "ebook",
-  // Data
+  // Data (6 formats)
   json: "data", csv: "data", xml: "data", yaml: "data", yml: "data", tsv: "data",
-  // 3D
+  // 3D (9 formats)
   obj: "3d", stl: "3d", ply: "3d", gltf: "3d", glb: "3d", dae: "3d",
-  off: "3d", fbx: "3d", "3ds": "3d", blend: "3d", usdz: "3d",
-  step: "3d", stp: "3d", iges: "3d", igs: "3d", ifc: "3d",
-  // Font
+  off: "3d", fbx: "3d", "3ds": "3d",
+  // Font (5 formats)
   ttf: "font", otf: "font", woff: "font", woff2: "font", eot: "font",
-  // Archive
+  // Archive (5 formats)
   zip: "archive", tar: "archive", gz: "archive", bz2: "archive", "7z": "archive",
-  // CAD
+  // CAD (1 format)
   dxf: "cad",
 };
 

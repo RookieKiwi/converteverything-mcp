@@ -44,7 +44,7 @@ import {
 // Package Info
 // ============================================================================
 
-const PACKAGE_VERSION = "1.2.0";
+const PACKAGE_VERSION = "1.2.2";
 const PACKAGE_NAME = "converteverything-mcp";
 
 // ============================================================================
@@ -90,7 +90,7 @@ function showHelp(): void {
   console.log(`
 ${PACKAGE_NAME} v${PACKAGE_VERSION}
 
-MCP server for ConvertEverything.io - Convert files between 93+ formats
+MCP server for ConvertEverything.io - Convert files between 100+ formats
 
 USAGE:
   npx ${PACKAGE_NAME} [OPTIONS]
@@ -214,7 +214,7 @@ const TOOLS: Tool[] = [
   {
     name: "get_supported_formats",
     description:
-      "Get a list of all supported file formats for conversion, organized by category " +
+      "Get a list of all 100+ supported file formats for conversion, organized by category " +
       "(audio, video, image, document, ebook, data, 3d, font, archive, cad).",
     inputSchema: {
       type: "object" as const,
@@ -247,7 +247,7 @@ const TOOLS: Tool[] = [
   {
     name: "convert_file",
     description:
-      "Convert a file from one format to another. Supports 93+ formats. " +
+      "Convert a file from one format to another. Supports 100+ formats. " +
       "Use 'preset' for quick settings or 'options' for fine-grained control.",
     inputSchema: {
       type: "object" as const,
@@ -404,7 +404,7 @@ const RESOURCES: Resource[] = [
   {
     uri: "converteverything://formats",
     name: "Supported Formats",
-    description: "Complete list of all 93+ supported file formats by category",
+    description: "Complete list of all 100+ supported file formats by category",
     mimeType: "text/plain",
   },
   {

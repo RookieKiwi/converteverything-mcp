@@ -1,7 +1,7 @@
 {
   "name": "converteverything-mcp",
-  "version": "1.2.1",
-  "description": "MCP server for ConvertEverything.io - Convert files between 93+ formats using AI assistants",
+  "version": "1.2.2",
+  "description": "MCP server for ConvertEverything.io - Convert files between 100+ formats using AI assistants",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
