@@ -17,6 +17,10 @@ Tired of sketchy converter websites with popup ads and "premium" upsells? We bui
 ## Features
 
 - **100+ Supported Formats**: Audio, video, image (including RAW camera formats), document, ebook, data, 3D, font, archive, and CAD files
+- **File Compression**: Compress images, videos, and PDFs with quality presets
+- **Archive Creation**: Create ZIP, TAR, 7z archives from multiple files
+- **File Sharing**: Generate shareable links and send files via email
+- **Cloud Import**: Import files from Google Drive, Dropbox, OneDrive, and Box
 - **Simple Integration**: Works with Claude Desktop, Claude Code, and any MCP-compatible client
 - **Conversion Options**: Fine-tune output quality, resolution, bitrate, and more
 - **Secure**: Uses your personal API key, no data stored on third-party servers beyond conversion processing
@@ -420,6 +424,235 @@ Claude: [Uses estimate_output_size] Estimated output: ~15 MB (from 150 MB WAV at
 - `target_format` (required): Target format
 - `options` (optional): Conversion options that affect size
 - `preset` (optional): Preset name
+
+---
+
+## Compression Tools
+
+### `compress_image`
+
+Compress an image file to reduce file size.
+
+```
+User: Compress this photo to make it smaller for email
+Claude: [Uses compress_image] Compressed from 5.2 MB to 1.1 MB (79% reduction)
+```
+
+**Parameters:**
+- `file_path` (required): Path to the image file
+- `quality` (optional): Quality level 1-100 (default: 80)
+- `max_dimension` (optional): Max width/height in pixels
+
+### `compress_video`
+
+Compress a video file to reduce file size.
+
+```
+User: Make this video smaller for uploading
+Claude: [Uses compress_video] Compressed from 500 MB to 85 MB
+```
+
+**Parameters:**
+- `file_path` (required): Path to the video file
+- `crf` (optional): Quality 0-51, lower is better (default: 28)
+- `preset` (optional): Speed preset (ultrafast, fast, medium, slow)
+- `max_resolution` (optional): Max resolution (e.g., "1920x1080", "720p")
+- `remove_audio` (optional): Remove audio track
+
+### `compress_pdf`
+
+Compress a PDF file to reduce file size.
+
+```
+User: This PDF is too large to email, can you compress it?
+Claude: [Uses compress_pdf] Compressed from 25 MB to 3.2 MB
+```
+
+**Parameters:**
+- `file_path` (required): Path to the PDF file
+- `quality` (optional): Quality level 1-100 (default: 80)
+
+### `get_compression_usage`
+
+Check your compression usage and limits.
+
+```
+User: How many compressions do I have left?
+Claude: [Uses get_compression_usage] You've used 15 of 100 compressions today
+```
+
+---
+
+## Archive Tools
+
+### `create_archive`
+
+Create an archive from multiple files.
+
+```
+User: Zip up all these project files
+Claude: [Uses create_archive] Created project.zip with 12 files (45 MB)
+```
+
+**Parameters:**
+- `file_paths` (required): Array of file paths to include
+- `output_format` (optional): zip, tar, tar.gz, tar.bz2, or 7z (default: zip)
+- `archive_name` (optional): Custom name for the archive
+- `compression_level` (optional): 1-9 (default: 6)
+
+---
+
+## Advanced Conversion Tools
+
+### `reconvert`
+
+Re-run a previous conversion with different settings.
+
+```
+User: Can you redo that last conversion but with higher quality?
+Claude: [Uses reconvert] Re-converting with quality set to 95...
+```
+
+**Parameters:**
+- `conversion_id` (required): ID of the previous conversion
+- `target_format` (optional): New target format
+- `options` (optional): New conversion options
+
+### `get_thumbnail`
+
+Get a thumbnail preview for a conversion.
+
+```
+User: Show me a preview of that converted image
+Claude: [Uses get_thumbnail] Here's a thumbnail preview...
+```
+
+**Parameters:**
+- `conversion_id` (required): The conversion ID
+- `save_path` (optional): Path to save the thumbnail
+
+### `batch_convert_api`
+
+True batch conversion using the API's batch endpoint (more efficient for large batches).
+
+```
+User: Convert all 50 of these files to PDF
+Claude: [Uses batch_convert_api] Batch started with ID batch_abc123...
+```
+
+**Parameters:**
+- `file_paths` (required): Array of file paths
+- `target_format` (required): Target format for all files
+- `options` (optional): Conversion options
+
+### `get_batch_status`
+
+Check the status of a batch conversion.
+
+```
+User: How's that batch conversion going?
+Claude: [Uses get_batch_status] 45 of 50 complete, 5 still processing...
+```
+
+**Parameters:**
+- `batch_id` (required): The batch ID
+
+---
+
+## File Sharing Tools
+
+### `list_my_files`
+
+List your shareable files.
+
+```
+User: What files do I have available to share?
+Claude: [Uses list_my_files] You have 5 files ready to share...
+```
+
+**Parameters:**
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Results per page (default: 20)
+
+### `create_share_link`
+
+Create a shareable download link for a file.
+
+```
+User: Generate a link I can share for that converted video
+Claude: [Uses create_share_link] Here's your shareable link: https://converteverything.io/s/abc123
+```
+
+**Parameters:**
+- `conversion_id` (required): The conversion ID
+- `expires_hours` (optional): Hours until link expires (default: 24)
+
+### `share_via_email`
+
+Share a file directly via email.
+
+```
+User: Email that PDF to john@example.com
+Claude: [Uses share_via_email] Email sent to john@example.com with download link
+```
+
+**Parameters:**
+- `conversion_id` (required): The conversion ID
+- `recipient_email` (required): Email address to send to
+- `message` (optional): Custom message to include
+
+---
+
+## Cloud Import Tools
+
+### `list_cloud_providers`
+
+List available cloud storage providers.
+
+```
+User: What cloud services can I import from?
+Claude: [Uses list_cloud_providers] You can import from Google Drive, Dropbox, OneDrive, and Box
+```
+
+### `list_cloud_connections`
+
+List your connected cloud storage accounts.
+
+```
+User: What cloud accounts do I have connected?
+Claude: [Uses list_cloud_connections] You have Google Drive (user@gmail.com) connected
+```
+
+### `list_cloud_files`
+
+Browse files in a connected cloud storage account.
+
+```
+User: Show me the files in my Google Drive
+Claude: [Uses list_cloud_files] Here are your Google Drive files...
+```
+
+**Parameters:**
+- `connection_id` (required): Cloud connection ID
+- `folder_id` (optional): Folder to browse (root if not specified)
+- `page_token` (optional): For pagination
+
+### `import_from_cloud`
+
+Import a file from cloud storage for conversion.
+
+```
+User: Import that video from my Dropbox and convert it to MP4
+Claude: [Uses import_from_cloud, then convert_file] Importing and converting...
+```
+
+**Parameters:**
+- `connection_id` (required): Cloud connection ID
+- `file_id` (required): Cloud file ID
+- `target_format` (optional): Convert immediately after import
+- `options` (optional): Conversion options (if converting)
+
+---
 
 ## Conversion Presets
 
