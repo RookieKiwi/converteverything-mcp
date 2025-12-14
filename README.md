@@ -9,7 +9,7 @@ An MCP (Model Context Protocol) server that enables AI assistants like Claude to
 Tired of sketchy converter websites with popup ads and "premium" upsells? We built [ConvertEverything.io](https://converteverything.io) for developers and power users who want:
 
 - **No ads, no BS** — Clean interface, fast conversions
-- **Actually free tier** — 5 conversions/day, no credit card required
+- **Actually free tier** — 20 conversions/day with free account, no credit card required
 - **Serious file size limits** — Up to 10GB per file (try finding that elsewhere)
 - **Privacy-first** — Files auto-delete, no data mining
 - **API access** — Because you're reading an MCP README, you probably want this
@@ -849,21 +849,23 @@ Your subscription tier has a daily conversion limit. [Upgrade to Gold](https://c
 
 ## Pricing
 
-API access requires a paid subscription. Here's what you get:
+API access requires Silver or Gold subscription. Here's what you get:
 
-| | **Silver** | **Gold** |
-|---|:---:|:---:|
-| **Price** | $9.99/mo | $19.99/mo |
-| **Conversions/Day** | 100 | **Unlimited** |
-| **Max File Size** | 5 GB | 10 GB |
-| **File Retention** | 30 days | 60 days |
-| **API Access** | ✅ | ✅ |
-| **Priority Queue** | Normal | **High Priority** |
-| **Bulk Uploads** | 25 files | 50 files |
+| | **Basic** | **Bronze** | **Silver** | **Gold** |
+|---|:---:|:---:|:---:|:---:|
+| **Price** | Free | $5.99/mo | $9.99/mo | $24.99/mo |
+| **Conversions/Day** | 20 | 50 | 100 | **Unlimited** |
+| **Max File Size** | 500 MB | 2 GB | 5 GB | 10 GB |
+| **Storage Cap** | — | 150 GB | 250 GB | 650 GB |
+| **File Retention** | 24 hours | 7 days | 15 days | 30 days |
+| **API Access** | ❌ | ❌ | ✅ 100/day | ✅ Unlimited |
+| **Cloud Import** | ❌ | Google, Dropbox | Google, Dropbox | All providers |
+| **Compressions/Day** | 20 | 50 | 100 | Unlimited |
+| **Batch Files** | 5 | 10 | 25 | 50 |
 
-👉 **[View Full Pricing](https://converteverything.io/pricing)**
+👉 **[View Full Pricing](https://converteverything.io/pricing)** | **[Get API Key](https://converteverything.io/api-keys)**
 
-Not ready to commit? The [free tier](https://converteverything.io/register) gives you 5 conversions/day to try it out (web only, no API).
+**Annual plans save 25%** — Gold annual works out to $18.74/month.
 
 ## Development
 
