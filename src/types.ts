@@ -225,6 +225,143 @@ export interface ConversionListResponse {
 }
 
 // ============================================================================
+// Compression Types
+// ============================================================================
+
+export interface CompressionOptions {
+  quality?: number;         // 1-100 for images, PDF quality level
+  max_dimension?: number;   // Max width/height for images
+  crf?: number;             // 0-51 for video (lower = better quality)
+  preset?: string;          // Video encoding preset
+  max_resolution?: string;  // Video max resolution (e.g., "1920x1080", "720p")
+  remove_audio?: boolean;   // Remove audio from video
+}
+
+export interface CompressionUsageResponse {
+  compressions_used: number;
+  compressions_limit: number;
+  compressions_remaining: number;
+  tier: string;
+}
+
+// ============================================================================
+// Archive Types
+// ============================================================================
+
+export interface ArchiveOptions {
+  output_format?: "zip" | "tar" | "tar.gz" | "tar.bz2" | "7z";
+  archive_name?: string;
+  compression_level?: number;  // 1-9
+}
+
+// ============================================================================
+// Batch Types
+// ============================================================================
+
+export interface BatchResponse {
+  batch_id: string;
+  conversions: ConversionResponse[];
+  total_files: number;
+  status: string;
+  completed: number;
+  failed: number;
+}
+
+export interface BatchListResponse {
+  batches: BatchResponse[];
+  total: number;
+}
+
+// ============================================================================
+// File Sharing Types
+// ============================================================================
+
+export interface ShareableFile {
+  short_id: string;
+  filename: string;
+  size_bytes: number;
+  mime_type: string;
+  countdown_seconds: number;
+  created_at: string;
+  expires_at: string;
+  download_count: number;
+  has_thumbnail: boolean;
+}
+
+export interface MyFilesResponse {
+  files: ShareableFile[];
+  total: number;
+  page: number;
+  per_page: number;
+}
+
+export interface ShareableLinkResponse {
+  short_id: string;
+  download_url: string;
+  share_url: string;
+  expires_at: string;
+}
+
+export interface ShareEmailResponse {
+  success: boolean;
+  message: string;
+}
+
+// ============================================================================
+// Cloud Import Types
+// ============================================================================
+
+export type CloudProvider = "google_drive" | "dropbox" | "onedrive" | "box";
+
+export interface CloudProviderInfo {
+  id: CloudProvider;
+  name: string;
+  available: boolean;
+  required_tier?: string;
+}
+
+export interface CloudProvidersResponse {
+  providers: CloudProviderInfo[];
+}
+
+export interface CloudConnection {
+  id: string;
+  provider: CloudProvider;
+  account_email: string;
+  connected_at: string;
+}
+
+export interface CloudConnectionsResponse {
+  connections: CloudConnection[];
+}
+
+export interface CloudFile {
+  id: string;
+  name: string;
+  mime_type: string;
+  size: number;
+  is_folder: boolean;
+  modified_at: string;
+}
+
+export interface CloudFileListResponse {
+  files: CloudFile[];
+  next_page_token?: string;
+}
+
+export interface CloudImportResponse {
+  success: boolean;
+  object_name: string;
+  file_name: string;
+  size: number;
+}
+
+export interface OAuthStartResponse {
+  auth_url: string;
+  state: string;
+}
+
+// ============================================================================
 // Client Configuration
 // ============================================================================
 

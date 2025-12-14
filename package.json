@@ -1,7 +1,7 @@
 {
   "name": "converteverything-mcp",
-  "version": "1.2.2",
-  "description": "MCP server for ConvertEverything.io - Convert files between 100+ formats using AI assistants",
+  "version": "2.0.0",
+  "description": "MCP server for ConvertEverything.io - Convert, compress, and share files between 100+ formats using AI assistants",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
@@ -26,7 +26,13 @@
     "imagemagick",
     "document-converter",
     "video-converter",
-    "audio-converter"
+    "audio-converter",
+    "image-compression",
+    "video-compression",
+    "pdf-compression",
+    "file-sharing",
+    "cloud-storage",
+    "batch-conversion"
   ],
   "author": "ConvertEverything.io",
   "license": "MIT",

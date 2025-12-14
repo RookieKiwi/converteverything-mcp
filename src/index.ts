@@ -38,13 +38,16 @@ import {
   getFormatsByCategory,
   FORMAT_CATEGORY_DESCRIPTIONS,
   FormatCategory,
+  CompressionOptions,
+  ArchiveOptions,
+  CloudProvider,
 } from "./types.js";
 
 // ============================================================================
 // Package Info
 // ============================================================================
 
-const PACKAGE_VERSION = "1.2.2";
+const PACKAGE_VERSION = "2.0.0";
 const PACKAGE_NAME = "converteverything-mcp";
 
 // ============================================================================
@@ -204,6 +207,81 @@ const EstimateOutputSizeSchema = z.object({
   target_format: z.string().min(1).max(10).describe("Target format"),
   options: z.record(z.unknown()).optional().describe("Conversion options"),
   preset: z.string().optional().describe("Preset name"),
+});
+
+// New schemas for v2.0 features
+const CompressImageSchema = z.object({
+  file_path: z.string().min(1).describe("Path to the image file"),
+  quality: z.number().min(1).max(100).optional().describe("Output quality 1-100 (default: 80)"),
+  max_dimension: z.number().optional().describe("Max width/height in pixels"),
+});
+
+const CompressVideoSchema = z.object({
+  file_path: z.string().min(1).describe("Path to the video file"),
+  crf: z.number().min(0).max(51).optional().describe("Quality 0-51 (default: 28, lower = better)"),
+  preset: z.string().optional().describe("Encoding preset: ultrafast, fast, medium, slow, veryslow"),
+  max_resolution: z.string().optional().describe("Max resolution (e.g., '1920x1080', '720p')"),
+  remove_audio: z.boolean().optional().describe("Remove audio track"),
+});
+
+const CompressPdfSchema = z.object({
+  file_path: z.string().min(1).describe("Path to the PDF file"),
+  quality: z.enum(["low", "medium", "high"]).optional().describe("Compression quality (default: medium)"),
+});
+
+const CreateArchiveSchema = z.object({
+  file_paths: z.array(z.string().min(1)).min(1).max(100).describe("Array of file paths to archive"),
+  output_format: z.enum(["zip", "tar", "tar.gz", "tar.bz2", "7z"]).optional().describe("Archive format (default: zip)"),
+  archive_name: z.string().optional().describe("Output filename (default: archive)"),
+  compression_level: z.number().min(1).max(9).optional().describe("Compression level 1-9 (default: 6)"),
+});
+
+const ReconvertSchema = z.object({
+  conversion_id: z.string().uuid().describe("ID of the original conversion"),
+  target_format: z.string().min(1).max(10).describe("New target format"),
+  options: z.record(z.unknown()).optional().describe("New conversion options"),
+});
+
+const GetThumbnailSchema = z.object({
+  conversion_id: z.string().uuid().describe("The conversion ID"),
+  save_path: z.string().optional().describe("Optional path to save the thumbnail"),
+});
+
+const TrueBatchConvertSchema = z.object({
+  file_paths: z.array(z.string().min(1)).min(1).max(50).describe("Array of file paths"),
+  target_format: z.string().min(1).max(10).describe("Target format for all files"),
+  options: z.record(z.unknown()).optional().describe("Shared conversion options"),
+});
+
+const GetBatchStatusSchema = z.object({
+  batch_id: z.string().uuid().describe("The batch ID"),
+});
+
+const ListMyFilesSchema = z.object({
+  page: z.number().optional().describe("Page number (default: 1)"),
+  per_page: z.number().optional().describe("Items per page (default: 20, max: 100)"),
+});
+
+const CreateShareLinkSchema = z.object({
+  conversion_id: z.string().uuid().describe("The conversion ID to share"),
+});
+
+const ShareViaEmailSchema = z.object({
+  short_id: z.string().min(1).describe("The short ID of the shareable file"),
+  recipient_email: z.string().email().describe("Email address to send to"),
+  message: z.string().optional().describe("Optional message to include"),
+});
+
+const ListCloudFilesSchema = z.object({
+  provider: z.enum(["google_drive", "dropbox", "onedrive", "box"]).describe("Cloud provider"),
+  folder_id: z.string().optional().describe("Folder ID (root if not specified)"),
+  page_token: z.string().optional().describe("Pagination token"),
+});
+
+const ImportFromCloudSchema = z.object({
+  provider: z.enum(["google_drive", "dropbox", "onedrive", "box"]).describe("Cloud provider"),
+  file_id: z.string().min(1).describe("File ID from cloud provider"),
+  file_name: z.string().min(1).describe("File name"),
 });
 
 // ============================================================================
@@ -392,6 +470,234 @@ const TOOLS: Tool[] = [
         preset: { type: "string", description: "Preset name" },
       },
       required: ["file_path", "target_format"],
+    },
+  },
+  // ========== Compression Tools (v2.0) ==========
+  {
+    name: "compress_image",
+    description:
+      "Compress an image file. Reduces file size while maintaining quality. " +
+      "Supports JPG, PNG, WebP, TIFF, BMP.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        file_path: { type: "string", description: "Path to the image file" },
+        quality: { type: "number", description: "Output quality 1-100 (default: 80)" },
+        max_dimension: { type: "number", description: "Max width/height in pixels" },
+      },
+      required: ["file_path"],
+    },
+  },
+  {
+    name: "compress_video",
+    description:
+      "Compress a video file. Reduces file size with configurable quality. " +
+      "Supports MP4, AVI, MKV, MOV, WebM, and more.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        file_path: { type: "string", description: "Path to the video file" },
+        crf: { type: "number", description: "Quality 0-51 (default: 28, lower = better)" },
+        preset: { type: "string", description: "Encoding preset: ultrafast, fast, medium, slow, veryslow" },
+        max_resolution: { type: "string", description: "Max resolution (e.g., '1920x1080', '720p')" },
+        remove_audio: { type: "boolean", description: "Remove audio track" },
+      },
+      required: ["file_path"],
+    },
+  },
+  {
+    name: "compress_pdf",
+    description:
+      "Compress a PDF file. Reduces file size with configurable quality levels.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        file_path: { type: "string", description: "Path to the PDF file" },
+        quality: { type: "string", description: "Compression quality: low, medium, high (default: medium)" },
+      },
+      required: ["file_path"],
+    },
+  },
+  {
+    name: "get_compression_usage",
+    description:
+      "Get your compression usage statistics and limits.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+  },
+  // ========== Archive Tools (v2.0) ==========
+  {
+    name: "create_archive",
+    description:
+      "Create an archive (ZIP, TAR, 7z) from multiple files. " +
+      "Useful for bundling files for download or backup.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        file_paths: {
+          type: "array",
+          items: { type: "string" },
+          description: "Array of file paths to include in archive",
+        },
+        output_format: { type: "string", description: "Archive format: zip, tar, tar.gz, tar.bz2, 7z (default: zip)" },
+        archive_name: { type: "string", description: "Output filename (default: archive)" },
+        compression_level: { type: "number", description: "Compression level 1-9 (default: 6)" },
+      },
+      required: ["file_paths"],
+    },
+  },
+  // ========== Advanced Conversion (v2.0) ==========
+  {
+    name: "reconvert",
+    description:
+      "Re-convert an existing conversion to a different format or with new options. " +
+      "Uses the original uploaded file without needing to upload again.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        conversion_id: { type: "string", description: "ID of the original conversion" },
+        target_format: { type: "string", description: "New target format" },
+        options: { type: "object", description: "New conversion options" },
+      },
+      required: ["conversion_id", "target_format"],
+    },
+  },
+  {
+    name: "get_thumbnail",
+    description:
+      "Get a thumbnail image for a conversion. Useful for previewing converted files.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        conversion_id: { type: "string", description: "The conversion ID" },
+        save_path: { type: "string", description: "Optional path to save the thumbnail" },
+      },
+      required: ["conversion_id"],
+    },
+  },
+  {
+    name: "batch_convert_api",
+    description:
+      "Convert multiple files using the true batch API endpoint. " +
+      "More efficient than sequential conversions for multiple files.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        file_paths: {
+          type: "array",
+          items: { type: "string" },
+          description: "Array of file paths to convert",
+        },
+        target_format: { type: "string", description: "Target format for all files" },
+        options: { type: "object", description: "Shared conversion options" },
+      },
+      required: ["file_paths", "target_format"],
+    },
+  },
+  {
+    name: "get_batch_status",
+    description:
+      "Get the status of a batch conversion.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        batch_id: { type: "string", description: "The batch ID" },
+      },
+      required: ["batch_id"],
+    },
+  },
+  // ========== File Sharing (v2.0) ==========
+  {
+    name: "list_my_files",
+    description:
+      "List your shareable files. Shows files you've converted that can be shared.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        page: { type: "number", description: "Page number (default: 1)" },
+        per_page: { type: "number", description: "Items per page (default: 20, max: 100)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "create_share_link",
+    description:
+      "Create a shareable download link for a converted file.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        conversion_id: { type: "string", description: "The conversion ID to share" },
+      },
+      required: ["conversion_id"],
+    },
+  },
+  {
+    name: "share_via_email",
+    description:
+      "Share a file by sending a download link via email.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        short_id: { type: "string", description: "The short ID of the shareable file" },
+        recipient_email: { type: "string", description: "Email address to send to" },
+        message: { type: "string", description: "Optional message to include" },
+      },
+      required: ["short_id", "recipient_email"],
+    },
+  },
+  // ========== Cloud Import (v2.0) ==========
+  {
+    name: "list_cloud_providers",
+    description:
+      "List available cloud storage providers for your tier. " +
+      "Bronze+: Google Drive, Dropbox. Gold: OneDrive, Box.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "list_cloud_connections",
+    description:
+      "List your connected cloud storage accounts.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "list_cloud_files",
+    description:
+      "Browse files in a connected cloud storage account.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        provider: { type: "string", description: "Cloud provider: google_drive, dropbox, onedrive, box" },
+        folder_id: { type: "string", description: "Folder ID (root if not specified)" },
+        page_token: { type: "string", description: "Pagination token for next page" },
+      },
+      required: ["provider"],
+    },
+  },
+  {
+    name: "import_from_cloud",
+    description:
+      "Import a file from cloud storage for conversion. " +
+      "File will be downloaded and ready for conversion.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        provider: { type: "string", description: "Cloud provider: google_drive, dropbox, onedrive, box" },
+        file_id: { type: "string", description: "File ID from cloud provider" },
+        file_name: { type: "string", description: "File name" },
+      },
+      required: ["provider", "file_id", "file_name"],
     },
   },
 ];
@@ -634,6 +940,43 @@ class ConvertEverythingServer {
             return await this.handleGetFileInfo(args);
           case "estimate_output_size":
             return await this.handleEstimateOutputSize(args);
+          // v2.0 Compression tools
+          case "compress_image":
+            return await this.handleCompressImage(args);
+          case "compress_video":
+            return await this.handleCompressVideo(args);
+          case "compress_pdf":
+            return await this.handleCompressPdf(args);
+          case "get_compression_usage":
+            return await this.handleGetCompressionUsage();
+          // v2.0 Archive tools
+          case "create_archive":
+            return await this.handleCreateArchive(args);
+          // v2.0 Advanced conversion
+          case "reconvert":
+            return await this.handleReconvert(args);
+          case "get_thumbnail":
+            return await this.handleGetThumbnail(args);
+          case "batch_convert_api":
+            return await this.handleBatchConvertApi(args);
+          case "get_batch_status":
+            return await this.handleGetBatchStatus(args);
+          // v2.0 File sharing
+          case "list_my_files":
+            return await this.handleListMyFiles(args);
+          case "create_share_link":
+            return await this.handleCreateShareLink(args);
+          case "share_via_email":
+            return await this.handleShareViaEmail(args);
+          // v2.0 Cloud import
+          case "list_cloud_providers":
+            return await this.handleListCloudProviders();
+          case "list_cloud_connections":
+            return await this.handleListCloudConnections();
+          case "list_cloud_files":
+            return await this.handleListCloudFiles(args);
+          case "import_from_cloud":
+            return await this.handleImportFromCloud(args);
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -1075,6 +1418,382 @@ class ConvertEverythingServer {
       `  Estimated Output: ${formatSize(estimate.estimatedSize)}\n` +
       `  Confidence: ${estimate.confidence}\n` +
       (estimate.notes ? `  Notes: ${estimate.notes}` : "");
+
+    return { content: [{ type: "text" as const, text }] };
+  }
+
+  // ==========================================================================
+  // v2.0 Compression Handlers
+  // ==========================================================================
+
+  private async handleCompressImage(args: unknown) {
+    const parsed = CompressImageSchema.parse(args);
+    const client = this.getClient();
+
+    const options: CompressionOptions = {};
+    if (parsed.quality !== undefined) options.quality = parsed.quality;
+    if (parsed.max_dimension !== undefined) options.max_dimension = parsed.max_dimension;
+
+    const result = await client.compressImage(parsed.file_path, options);
+
+    const text =
+      `Image compression started:\n` +
+      `  ID: ${result.id}\n` +
+      `  Status: ${result.status}\n` +
+      `  File: ${result.original_filename}\n` +
+      (parsed.quality !== undefined ? `  Quality: ${parsed.quality}%\n` : "") +
+      (parsed.max_dimension !== undefined ? `  Max dimension: ${parsed.max_dimension}px\n` : "") +
+      `\nUse wait_for_conversion to wait for completion.`;
+
+    return { content: [{ type: "text" as const, text }] };
+  }
+
+  private async handleCompressVideo(args: unknown) {
+    const parsed = CompressVideoSchema.parse(args);
+    const client = this.getClient();
+
+    const options: CompressionOptions = {};
+    if (parsed.crf !== undefined) options.crf = parsed.crf;
+    if (parsed.preset) options.preset = parsed.preset;
+    if (parsed.max_resolution) options.max_resolution = parsed.max_resolution;
+    if (parsed.remove_audio !== undefined) options.remove_audio = parsed.remove_audio;
+
+    const result = await client.compressVideo(parsed.file_path, options);
+
+    const text =
+      `Video compression started:\n` +
+      `  ID: ${result.id}\n` +
+      `  Status: ${result.status}\n` +
+      `  File: ${result.original_filename}\n` +
+      (parsed.crf !== undefined ? `  CRF: ${parsed.crf}\n` : "") +
+      (parsed.preset ? `  Preset: ${parsed.preset}\n` : "") +
+      (parsed.max_resolution ? `  Max resolution: ${parsed.max_resolution}\n` : "") +
+      (parsed.remove_audio ? `  Audio: removed\n` : "") +
+      `\nUse wait_for_conversion to wait for completion.`;
+
+    return { content: [{ type: "text" as const, text }] };
+  }
+
+  private async handleCompressPdf(args: unknown) {
+    const parsed = CompressPdfSchema.parse(args);
+    const client = this.getClient();
+
+    const result = await client.compressPdf(parsed.file_path, parsed.quality);
+
+    const text =
+      `PDF compression started:\n` +
+      `  ID: ${result.id}\n` +
+      `  Status: ${result.status}\n` +
+      `  File: ${result.original_filename}\n` +
+      (parsed.quality ? `  Quality: ${parsed.quality}\n` : "") +
+      `\nUse wait_for_conversion to wait for completion.`;
+
+    return { content: [{ type: "text" as const, text }] };
+  }
+
+  private async handleGetCompressionUsage() {
+    const client = this.getClient();
+    const usage = await client.getCompressionUsage();
+
+    const limitText = usage.compressions_limit === -1
+      ? "Unlimited"
+      : usage.compressions_limit.toString();
+
+    const remainingText = usage.compressions_remaining === -1
+      ? "Unlimited"
+      : usage.compressions_remaining.toString();
+
+    const text =
+      `Compression Usage:\n` +
+      `  Tier: ${usage.tier}\n` +
+      `  Compressions used: ${usage.compressions_used}\n` +
+      `  Limit: ${limitText}\n` +
+      `  Remaining: ${remainingText}`;
+
+    return { content: [{ type: "text" as const, text }] };
+  }
+
+  // ==========================================================================
+  // v2.0 Archive Handler
+  // ==========================================================================
+
+  private async handleCreateArchive(args: unknown) {
+    const parsed = CreateArchiveSchema.parse(args);
+    const client = this.getClient();
+
+    const options: ArchiveOptions = {};
+    if (parsed.output_format) options.output_format = parsed.output_format;
+    if (parsed.archive_name) options.archive_name = parsed.archive_name;
+    if (parsed.compression_level !== undefined) options.compression_level = parsed.compression_level;
+
+    const result = await client.createArchive(parsed.file_paths, options);
+
+    const text =
+      `Archive creation started:\n` +
+      `  ID: ${result.id}\n` +
+      `  Status: ${result.status}\n` +
+      `  Files: ${parsed.file_paths.length}\n` +
+      `  Format: ${parsed.output_format || "zip"}\n` +
+      (parsed.archive_name ? `  Name: ${parsed.archive_name}\n` : "") +
+      `\nUse wait_for_conversion to wait for completion.`;
+
+    return { content: [{ type: "text" as const, text }] };
+  }
+
+  // ==========================================================================
+  // v2.0 Advanced Conversion Handlers
+  // ==========================================================================
+
+  private async handleReconvert(args: unknown) {
+    const parsed = ReconvertSchema.parse(args);
+    const client = this.getClient();
+
+    const result = await client.reconvert(
+      parsed.conversion_id,
+      parsed.target_format,
+      parsed.options as Record<string, unknown>
+    );
+
+    const text =
+      `Re-conversion started:\n` +
+      `  New ID: ${result.id}\n` +
+      `  Status: ${result.status}\n` +
+      `  Original ID: ${parsed.conversion_id}\n` +
+      `  New format: ${parsed.target_format.toUpperCase()}\n` +
+      `\nUse wait_for_conversion to wait for completion.`;
+
+    return { content: [{ type: "text" as const, text }] };
+  }
+
+  private async handleGetThumbnail(args: unknown) {
+    const parsed = GetThumbnailSchema.parse(args);
+    const client = this.getClient();
+
+    const { data, contentType } = await client.getThumbnail(parsed.conversion_id);
+
+    if (parsed.save_path) {
+      const savePath = path.resolve(parsed.save_path);
+      fs.writeFileSync(savePath, data);
+
+      return {
+        content: [{
+          type: "text" as const,
+          text: `Thumbnail saved to: ${savePath}\nSize: ${data.length} bytes\nType: ${contentType}`,
+        }],
+      };
+    }
+
+    const base64 = data.toString("base64");
+    return {
+      content: [{
+        type: "text" as const,
+        text: `Thumbnail for conversion ${parsed.conversion_id}\nSize: ${data.length} bytes\nType: ${contentType}\nData (base64):\n${base64}`,
+      }],
+    };
+  }
+
+  private async handleBatchConvertApi(args: unknown) {
+    const parsed = TrueBatchConvertSchema.parse(args);
+    const client = this.getClient();
+
+    const result = await client.batchConvert(
+      parsed.file_paths,
+      parsed.target_format,
+      parsed.options as Record<string, unknown>
+    );
+
+    let text =
+      `Batch conversion started:\n` +
+      `  Batch ID: ${result.batch_id}\n` +
+      `  Total files: ${result.total_files}\n` +
+      `  Target format: ${parsed.target_format.toUpperCase()}\n\n`;
+
+    if (result.conversions && result.conversions.length > 0) {
+      text += `Conversions:\n`;
+      for (const conv of result.conversions) {
+        text += `  ${conv.original_filename} → ${conv.id}\n`;
+      }
+    }
+
+    text += `\nUse get_batch_status to check progress.`;
+
+    return { content: [{ type: "text" as const, text }] };
+  }
+
+  private async handleGetBatchStatus(args: unknown) {
+    const parsed = GetBatchStatusSchema.parse(args);
+    const client = this.getClient();
+
+    const result = await client.getBatchStatus(parsed.batch_id);
+
+    let text =
+      `Batch Status:\n` +
+      `  Batch ID: ${result.batch_id}\n` +
+      `  Status: ${result.status}\n` +
+      `  Total: ${result.total_files}\n` +
+      `  Completed: ${result.completed}\n` +
+      `  Failed: ${result.failed}\n\n`;
+
+    if (result.conversions && result.conversions.length > 0) {
+      text += `Conversions:\n`;
+      for (const conv of result.conversions) {
+        text += `  ${conv.original_filename}: ${conv.status}`;
+        if (conv.error_message) text += ` (${conv.error_message})`;
+        text += "\n";
+      }
+    }
+
+    return { content: [{ type: "text" as const, text }] };
+  }
+
+  // ==========================================================================
+  // v2.0 File Sharing Handlers
+  // ==========================================================================
+
+  private async handleListMyFiles(args: unknown) {
+    const parsed = ListMyFilesSchema.parse(args);
+    const client = this.getClient();
+
+    const result = await client.listMyFiles(parsed.page, parsed.per_page);
+
+    let text = `Your Files (${result.files.length} of ${result.total}):\n\n`;
+
+    if (result.files.length === 0) {
+      text += "No shareable files found.";
+    } else {
+      for (const file of result.files) {
+        const sizeKB = (file.size_bytes / 1024).toFixed(1);
+        text += `${file.short_id}: ${file.filename}\n`;
+        text += `  Size: ${sizeKB} KB | Downloads: ${file.download_count}\n`;
+        text += `  Expires: ${file.expires_at}\n\n`;
+      }
+    }
+
+    return { content: [{ type: "text" as const, text }] };
+  }
+
+  private async handleCreateShareLink(args: unknown) {
+    const parsed = CreateShareLinkSchema.parse(args);
+    const client = this.getClient();
+
+    const result = await client.createShareLink(parsed.conversion_id);
+
+    const text =
+      `Share link created:\n` +
+      `  Short ID: ${result.short_id}\n` +
+      `  Share URL: ${result.share_url}\n` +
+      `  Download URL: ${result.download_url}\n` +
+      `  Expires: ${result.expires_at}`;
+
+    return { content: [{ type: "text" as const, text }] };
+  }
+
+  private async handleShareViaEmail(args: unknown) {
+    const parsed = ShareViaEmailSchema.parse(args);
+    const client = this.getClient();
+
+    const result = await client.shareViaEmail(
+      parsed.short_id,
+      parsed.recipient_email,
+      parsed.message
+    );
+
+    const text = result.success
+      ? `✓ ${result.message}`
+      : `✗ ${result.message}`;
+
+    return { content: [{ type: "text" as const, text }] };
+  }
+
+  // ==========================================================================
+  // v2.0 Cloud Import Handlers
+  // ==========================================================================
+
+  private async handleListCloudProviders() {
+    const client = this.getClient();
+    const result = await client.listCloudProviders();
+
+    let text = `Cloud Storage Providers:\n\n`;
+
+    for (const provider of result.providers) {
+      const status = provider.available ? "✓ Available" : `✗ Requires ${provider.required_tier || "upgrade"}`;
+      text += `${provider.name} (${provider.id})\n`;
+      text += `  ${status}\n\n`;
+    }
+
+    return { content: [{ type: "text" as const, text }] };
+  }
+
+  private async handleListCloudConnections() {
+    const client = this.getClient();
+    const result = await client.listCloudConnections();
+
+    if (result.connections.length === 0) {
+      return {
+        content: [{
+          type: "text" as const,
+          text: "No cloud storage accounts connected.\n\nConnect an account at https://converteverything.io/settings",
+        }],
+      };
+    }
+
+    let text = `Connected Cloud Accounts:\n\n`;
+
+    for (const conn of result.connections) {
+      text += `${conn.provider}: ${conn.account_email}\n`;
+      text += `  Connected: ${conn.connected_at}\n\n`;
+    }
+
+    return { content: [{ type: "text" as const, text }] };
+  }
+
+  private async handleListCloudFiles(args: unknown) {
+    const parsed = ListCloudFilesSchema.parse(args);
+    const client = this.getClient();
+
+    const result = await client.listCloudFiles(
+      parsed.provider as CloudProvider,
+      parsed.folder_id,
+      parsed.page_token
+    );
+
+    let text = `Files from ${parsed.provider}:\n\n`;
+
+    if (result.files.length === 0) {
+      text += "No files found in this folder.";
+    } else {
+      for (const file of result.files) {
+        const icon = file.is_folder ? "📁" : "📄";
+        const sizeStr = file.is_folder ? "" : ` (${(file.size / 1024).toFixed(1)} KB)`;
+        text += `${icon} ${file.name}${sizeStr}\n`;
+        text += `   ID: ${file.id}\n`;
+      }
+    }
+
+    if (result.next_page_token) {
+      text += `\nMore files available. Use page_token: "${result.next_page_token}"`;
+    }
+
+    return { content: [{ type: "text" as const, text }] };
+  }
+
+  private async handleImportFromCloud(args: unknown) {
+    const parsed = ImportFromCloudSchema.parse(args);
+    const client = this.getClient();
+
+    const result = await client.importFromCloud(
+      parsed.provider as CloudProvider,
+      parsed.file_id,
+      parsed.file_name
+    );
+
+    const text = result.success
+      ? `✓ File imported successfully!\n` +
+        `  File: ${result.file_name}\n` +
+        `  Size: ${(result.size / 1024).toFixed(1)} KB\n` +
+        `  Object: ${result.object_name}\n\n` +
+        `The file is now available for conversion. Use convert_file with this file path.`
+      : `✗ Failed to import file`;
 
     return { content: [{ type: "text" as const, text }] };
   }

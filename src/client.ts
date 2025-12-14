@@ -18,6 +18,18 @@ import {
   DEFAULT_BASE_URL,
   DEFAULT_TIMEOUT,
   isFormatSupported,
+  CompressionOptions,
+  CompressionUsageResponse,
+  ArchiveOptions,
+  BatchResponse,
+  MyFilesResponse,
+  ShareableLinkResponse,
+  ShareEmailResponse,
+  CloudProvider,
+  CloudProvidersResponse,
+  CloudConnectionsResponse,
+  CloudFileListResponse,
+  CloudImportResponse,
 } from "./types.js";
 
 export interface WaitOptions {
@@ -690,6 +702,385 @@ export class ConvertEverythingClient {
       `To retry conversion ${conversionId}, please re-upload the original file ` +
       `(${original.original_filename}) and convert to ${original.target_format} again. ` +
       `Original error: ${original.error_message || "Unknown"}`
+    );
+  }
+
+  // ==========================================================================
+  // Compression Methods
+  // ==========================================================================
+
+  /**
+   * Compress an image file
+   */
+  async compressImage(
+    filePath: string,
+    options?: CompressionOptions
+  ): Promise<ConversionResponse> {
+    const realPath = this.validateFilePath(filePath);
+    const fileBuffer = fs.readFileSync(realPath);
+    const fileName = path.basename(realPath);
+
+    const formData = new FormData();
+    const blob = new Blob([fileBuffer]);
+    formData.append("file", blob, this.sanitizeFilename(fileName));
+
+    if (options?.quality !== undefined) {
+      formData.append("quality", options.quality.toString());
+    }
+    if (options?.max_dimension !== undefined) {
+      formData.append("max_dimension", options.max_dimension.toString());
+    }
+
+    return this.request<ConversionResponse>("/tools/compress/image", {
+      method: "POST",
+      body: formData,
+    });
+  }
+
+  /**
+   * Compress a video file
+   */
+  async compressVideo(
+    filePath: string,
+    options?: CompressionOptions
+  ): Promise<ConversionResponse> {
+    const realPath = this.validateFilePath(filePath);
+    const fileBuffer = fs.readFileSync(realPath);
+    const fileName = path.basename(realPath);
+
+    const formData = new FormData();
+    const blob = new Blob([fileBuffer]);
+    formData.append("file", blob, this.sanitizeFilename(fileName));
+
+    if (options?.crf !== undefined) {
+      formData.append("crf", options.crf.toString());
+    }
+    if (options?.preset) {
+      formData.append("preset", options.preset);
+    }
+    if (options?.max_resolution) {
+      formData.append("max_resolution", options.max_resolution);
+    }
+    if (options?.remove_audio !== undefined) {
+      formData.append("remove_audio", options.remove_audio.toString());
+    }
+
+    return this.request<ConversionResponse>("/tools/compress/video", {
+      method: "POST",
+      body: formData,
+    });
+  }
+
+  /**
+   * Compress a PDF file
+   */
+  async compressPdf(
+    filePath: string,
+    quality?: "low" | "medium" | "high"
+  ): Promise<ConversionResponse> {
+    const realPath = this.validateFilePath(filePath);
+    const fileBuffer = fs.readFileSync(realPath);
+    const fileName = path.basename(realPath);
+
+    const formData = new FormData();
+    const blob = new Blob([fileBuffer]);
+    formData.append("file", blob, this.sanitizeFilename(fileName));
+
+    if (quality) {
+      formData.append("quality", quality);
+    }
+
+    return this.request<ConversionResponse>("/tools/compress/pdf", {
+      method: "POST",
+      body: formData,
+    });
+  }
+
+  /**
+   * Get compression usage statistics
+   */
+  async getCompressionUsage(): Promise<CompressionUsageResponse> {
+    return this.request<CompressionUsageResponse>("/tools/compress/usage");
+  }
+
+  // ==========================================================================
+  // Archive Methods
+  // ==========================================================================
+
+  /**
+   * Create an archive from multiple files
+   */
+  async createArchive(
+    filePaths: string[],
+    options?: ArchiveOptions
+  ): Promise<ConversionResponse> {
+    const formData = new FormData();
+
+    for (const filePath of filePaths) {
+      const realPath = this.validateFilePath(filePath);
+      const fileBuffer = fs.readFileSync(realPath);
+      const fileName = path.basename(realPath);
+      const blob = new Blob([fileBuffer]);
+      formData.append("files", blob, this.sanitizeFilename(fileName));
+    }
+
+    if (options?.output_format) {
+      formData.append("output_format", options.output_format);
+    }
+    if (options?.archive_name) {
+      formData.append("archive_name", options.archive_name);
+    }
+    if (options?.compression_level !== undefined) {
+      formData.append("compression_level", options.compression_level.toString());
+    }
+
+    return this.request<ConversionResponse>("/tools/create-archive", {
+      method: "POST",
+      body: formData,
+    });
+  }
+
+  // ==========================================================================
+  // Advanced Conversion Methods
+  // ==========================================================================
+
+  /**
+   * Reconvert an existing conversion with new settings
+   */
+  async reconvert(
+    conversionId: string,
+    targetFormat: string,
+    options?: ConversionOptions
+  ): Promise<ConversionResponse> {
+    if (!this.isValidUuid(conversionId)) {
+      throw new Error("Invalid conversion ID format");
+    }
+
+    const normalizedFormat = targetFormat.toLowerCase().replace(/^\./, "");
+
+    const body: Record<string, unknown> = {
+      output_format: normalizedFormat,
+    };
+
+    if (options && Object.keys(options).length > 0) {
+      body.options = options;
+    }
+
+    return this.request<ConversionResponse>(`/convert/${conversionId}/reconvert`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  }
+
+  /**
+   * Get thumbnail for a conversion
+   */
+  async getThumbnail(conversionId: string): Promise<{
+    data: Buffer;
+    contentType: string;
+  }> {
+    if (!this.isValidUuid(conversionId)) {
+      throw new Error("Invalid conversion ID format");
+    }
+
+    const url = `${this.baseUrl}/api/convert/${conversionId}/thumbnail`;
+    const correlationId = this.generateCorrelationId();
+
+    const response = await this.fetchWithRetry(
+      url,
+      {
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          "User-Agent": this.userAgent,
+        },
+      },
+      correlationId
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to get thumbnail: ${response.status} ${response.statusText}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const contentType = response.headers.get("Content-Type") || "image/jpeg";
+
+    return { data: buffer, contentType };
+  }
+
+  /**
+   * Use the true batch API endpoint
+   */
+  async batchConvert(
+    filePaths: string[],
+    targetFormat: string,
+    options?: ConversionOptions
+  ): Promise<BatchResponse> {
+    const normalizedFormat = targetFormat.toLowerCase().replace(/^\./, "");
+    if (!isFormatSupported(normalizedFormat)) {
+      throw new Error(`Unsupported target format: ${targetFormat}`);
+    }
+
+    const formData = new FormData();
+
+    for (const filePath of filePaths) {
+      const realPath = this.validateFilePath(filePath);
+      const fileBuffer = fs.readFileSync(realPath);
+      const fileName = path.basename(realPath);
+      const blob = new Blob([fileBuffer]);
+      formData.append("files", blob, this.sanitizeFilename(fileName));
+    }
+
+    formData.append("output_format", normalizedFormat);
+
+    if (options && Object.keys(options).length > 0) {
+      formData.append("options", JSON.stringify(options));
+    }
+
+    return this.request<BatchResponse>("/convert/batch", {
+      method: "POST",
+      body: formData,
+    });
+  }
+
+  /**
+   * Get batch status
+   */
+  async getBatchStatus(batchId: string): Promise<BatchResponse> {
+    if (!this.isValidUuid(batchId)) {
+      throw new Error("Invalid batch ID format");
+    }
+    return this.request<BatchResponse>(`/convert/batch/${batchId}`);
+  }
+
+  // ==========================================================================
+  // File Sharing Methods
+  // ==========================================================================
+
+  /**
+   * List user's shareable files
+   */
+  async listMyFiles(page: number = 1, perPage: number = 20): Promise<MyFilesResponse> {
+    const skip = (page - 1) * perPage;
+    return this.request<MyFilesResponse>(`/files/my-files?skip=${skip}&limit=${perPage}`);
+  }
+
+  /**
+   * Create a shareable link for a conversion
+   */
+  async createShareLink(conversionId: string): Promise<ShareableLinkResponse> {
+    if (!this.isValidUuid(conversionId)) {
+      throw new Error("Invalid conversion ID format");
+    }
+
+    return this.request<ShareableLinkResponse>("/files/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversion_id: conversionId }),
+    });
+  }
+
+  /**
+   * Share a file via email
+   */
+  async shareViaEmail(
+    shortId: string,
+    recipientEmail: string,
+    message?: string
+  ): Promise<ShareEmailResponse> {
+    const body: Record<string, string> = {
+      recipient_email: recipientEmail,
+    };
+    if (message) {
+      body.message = message;
+    }
+
+    return this.request<ShareEmailResponse>(`/files/d/${shortId}/share-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  }
+
+  // ==========================================================================
+  // Cloud Import Methods
+  // ==========================================================================
+
+  /**
+   * List available cloud providers for user's tier
+   */
+  async listCloudProviders(): Promise<CloudProvidersResponse> {
+    return this.request<CloudProvidersResponse>("/cloud/providers");
+  }
+
+  /**
+   * List connected cloud accounts
+   */
+  async listCloudConnections(): Promise<CloudConnectionsResponse> {
+    return this.request<CloudConnectionsResponse>("/cloud/connections");
+  }
+
+  /**
+   * List files from a connected cloud provider
+   */
+  async listCloudFiles(
+    provider: CloudProvider,
+    folderId?: string,
+    pageToken?: string
+  ): Promise<CloudFileListResponse> {
+    let url = `/cloud/files/${provider}`;
+    const params: string[] = [];
+
+    if (folderId) params.push(`folder_id=${encodeURIComponent(folderId)}`);
+    if (pageToken) params.push(`page_token=${encodeURIComponent(pageToken)}`);
+
+    if (params.length > 0) {
+      url += `?${params.join("&")}`;
+    }
+
+    return this.request<CloudFileListResponse>(url);
+  }
+
+  /**
+   * Import a file from cloud storage
+   */
+  async importFromCloud(
+    provider: CloudProvider,
+    fileId: string,
+    fileName: string
+  ): Promise<CloudImportResponse> {
+    return this.request<CloudImportResponse>("/cloud/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        provider,
+        file_id: fileId,
+        file_name: fileName,
+      }),
+    });
+  }
+
+  /**
+   * Import from cloud and convert in one step
+   */
+  async importAndConvert(
+    provider: CloudProvider,
+    fileId: string,
+    fileName: string,
+    targetFormat: string,
+    options?: ConversionOptions
+  ): Promise<ConversionResponse> {
+    // First import the file
+    const imported = await this.importFromCloud(provider, fileId, fileName);
+
+    // The imported file is now in temporary storage, we need to convert it
+    // Note: This requires the backend to support conversion from imported files
+    // For now, we return the import result and user can convert separately
+    throw new Error(
+      `File imported successfully as ${imported.object_name}. ` +
+      `Direct import-and-convert is not yet supported. ` +
+      `Please download the file and use convert_file instead.`
     );
   }
 
