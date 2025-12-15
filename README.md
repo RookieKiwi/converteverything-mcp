@@ -63,7 +63,11 @@ Browse all [audio converters](https://converteverything.io/audio-converters), [v
 ## Requirements
 
 - Node.js 18 or higher
-- ConvertEverything.io API key (requires [Silver or Gold subscription](https://converteverything.io/pricing))
+- ConvertEverything.io API key — **100% FREE for all registered users!**
+  - Free account: 5 API calls/day
+  - Bronze ($5.99/mo): 200 API calls/day
+  - Silver ($9.99/mo): 400 API calls/day
+  - Gold ($24.99/mo): Unlimited API calls
 
 ## Installation
 
@@ -87,9 +91,10 @@ npm run build
 ### 1. Get an API Key
 
 1. Sign up at [converteverything.io](https://converteverything.io/register) (it's free)
-2. Subscribe to [Silver or Gold plan](https://converteverything.io/pricing) for API access
-3. Go to [API Keys](https://converteverything.io/api-keys) and create a new key
-4. Copy the key (starts with `ce_`)
+2. Go to [API Keys](https://converteverything.io/api-keys) and create a new key
+3. Copy the key (starts with `ce_`)
+
+> **API access is 100% free!** All registered users get API access. Free tier: 5 calls/day. [Upgrade](https://converteverything.io/pricing) for more.
 
 ### 2. Client Configuration
 
@@ -849,19 +854,22 @@ Your subscription tier has a daily conversion limit. [Upgrade to Gold](https://c
 
 ## Pricing
 
-API access requires Silver or Gold subscription. Here's what you get:
+API access is available to all registered users. Here's what you get:
 
 | | **Basic** | **Bronze** | **Silver** | **Gold** |
 |---|:---:|:---:|:---:|:---:|
 | **Price** | Free | $5.99/mo | $9.99/mo | $24.99/mo |
 | **Conversions/Day** | 20 | 50 | 100 | **Unlimited** |
+| **API Calls/Day** | 5 | 200 | 400 | Unlimited |
+| **API Rate Limit** | 5/min | 30/min | 60/min | 120/min |
 | **Max File Size** | 500 MB | 2 GB | 5 GB | 10 GB |
-| **Storage Cap** | — | 150 GB | 250 GB | 650 GB |
+| **Storage Cap** | 5 GB | 150 GB | 250 GB | 650 GB |
 | **File Retention** | 24 hours | 7 days | 15 days | 30 days |
-| **API Access** | ❌ | ❌ | ✅ 100/day | ✅ Unlimited |
-| **Cloud Import** | ❌ | Google, Dropbox | Google, Dropbox | All providers |
-| **Compressions/Day** | 20 | 50 | 100 | Unlimited |
-| **Batch Files** | 5 | 10 | 25 | 50 |
+| **Compressions/Day** | 20 | 50 | Unlimited | Unlimited |
+| **Archives/Day** | 20 | 50 | Unlimited | Unlimited |
+| **Batch Files** | 20 | 50 | 100 | Unlimited |
+| **Webhooks/Day** | — | — | 100 | Unlimited |
+| **Cloud Import** | — | Google, Dropbox | Google, Dropbox | All providers |
 
 👉 **[View Full Pricing](https://converteverything.io/pricing)** | **[Get API Key](https://converteverything.io/api-keys)**
 
