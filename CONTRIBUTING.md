@@ -26,7 +26,7 @@ CONVERTEVERYTHING_API_KEY=ce_your_key npm run dev
 
 You'll need a valid ConvertEverything.io API key to test the MCP server.
 
-1. Get a Silver or Gold subscription at [converteverything.io/pricing](https://converteverything.io/pricing)
+1. Create a free account at [converteverything.io/register](https://converteverything.io/register) (API access is free for all users!)
 2. Create an API key at [converteverything.io/api-keys](https://converteverything.io/api-keys)
 3. Set the environment variable: `export CONVERTEVERYTHING_API_KEY=ce_your_key`
 

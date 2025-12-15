@@ -112,10 +112,10 @@ EXAMPLES:
   npx ${PACKAGE_NAME} --api-key ce_your_key_here
   npx ${PACKAGE_NAME} -k ce_your_key_here
 
-GET AN API KEY:
+GET AN API KEY (100% FREE!):
   1. Sign up at https://converteverything.io/register
-  2. Subscribe to Silver ($9.99/mo) or Gold ($19.99/mo)
-  3. Create a key at https://converteverything.io/api-keys
+  2. Create a key at https://converteverything.io/api-keys
+  (API access is FREE for all registered users!)
 
 MORE INFO:
   https://github.com/converteverything/converteverything-mcp
