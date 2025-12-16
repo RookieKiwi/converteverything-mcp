@@ -730,6 +730,9 @@ export class ConvertEverythingClient {
     if (options?.max_dimension !== undefined) {
       formData.append("max_dimension", options.max_dimension.toString());
     }
+    if (options?.retention_hours !== undefined) {
+      formData.append("retention_hours", options.retention_hours.toString());
+    }
 
     return this.request<ConversionResponse>("/tools/compress/image", {
       method: "POST",
@@ -764,6 +767,9 @@ export class ConvertEverythingClient {
     if (options?.remove_audio !== undefined) {
       formData.append("remove_audio", options.remove_audio.toString());
     }
+    if (options?.retention_hours !== undefined) {
+      formData.append("retention_hours", options.retention_hours.toString());
+    }
 
     return this.request<ConversionResponse>("/tools/compress/video", {
       method: "POST",
@@ -776,7 +782,8 @@ export class ConvertEverythingClient {
    */
   async compressPdf(
     filePath: string,
-    quality?: "low" | "medium" | "high"
+    quality?: "low" | "medium" | "high",
+    retentionHours?: number
   ): Promise<ConversionResponse> {
     const realPath = this.validateFilePath(filePath);
     const fileBuffer = fs.readFileSync(realPath);
@@ -788,6 +795,9 @@ export class ConvertEverythingClient {
 
     if (quality) {
       formData.append("quality", quality);
+    }
+    if (retentionHours !== undefined) {
+      formData.append("retention_hours", retentionHours.toString());
     }
 
     return this.request<ConversionResponse>("/tools/compress/pdf", {
@@ -832,6 +842,9 @@ export class ConvertEverythingClient {
     }
     if (options?.compression_level !== undefined) {
       formData.append("compression_level", options.compression_level.toString());
+    }
+    if (options?.retention_hours !== undefined) {
+      formData.append("retention_hours", options.retention_hours.toString());
     }
 
     return this.request<ConversionResponse>("/tools/create-archive", {

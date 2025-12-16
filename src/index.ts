@@ -214,6 +214,7 @@ const CompressImageSchema = z.object({
   file_path: z.string().min(1).describe("Path to the image file"),
   quality: z.number().min(1).max(100).optional().describe("Output quality 1-100 (default: 80)"),
   max_dimension: z.number().optional().describe("Max width/height in pixels"),
+  retention_hours: z.number().min(1).max(720).optional().describe("File retention in hours (default: 24, max based on tier: Basic=24h, Bronze=168h, Silver=360h, Gold=720h)"),
 });
 
 const CompressVideoSchema = z.object({
@@ -222,11 +223,13 @@ const CompressVideoSchema = z.object({
   preset: z.string().optional().describe("Encoding preset: ultrafast, fast, medium, slow, veryslow"),
   max_resolution: z.string().optional().describe("Max resolution (e.g., '1920x1080', '720p')"),
   remove_audio: z.boolean().optional().describe("Remove audio track"),
+  retention_hours: z.number().min(1).max(720).optional().describe("File retention in hours (default: 24, max based on tier: Basic=24h, Bronze=168h, Silver=360h, Gold=720h)"),
 });
 
 const CompressPdfSchema = z.object({
   file_path: z.string().min(1).describe("Path to the PDF file"),
   quality: z.enum(["low", "medium", "high"]).optional().describe("Compression quality (default: medium)"),
+  retention_hours: z.number().min(1).max(720).optional().describe("File retention in hours (default: 24, max based on tier: Basic=24h, Bronze=168h, Silver=360h, Gold=720h)"),
 });
 
 const CreateArchiveSchema = z.object({
@@ -234,6 +237,7 @@ const CreateArchiveSchema = z.object({
   output_format: z.enum(["zip", "tar", "tar.gz", "tar.bz2", "7z"]).optional().describe("Archive format (default: zip)"),
   archive_name: z.string().optional().describe("Output filename (default: archive)"),
   compression_level: z.number().min(1).max(9).optional().describe("Compression level 1-9 (default: 6)"),
+  retention_hours: z.number().min(1).max(720).optional().describe("File retention in hours (default: 24, max based on tier: Basic=24h, Bronze=168h, Silver=360h, Gold=720h)"),
 });
 
 const ReconvertSchema = z.object({
@@ -484,6 +488,7 @@ const TOOLS: Tool[] = [
         file_path: { type: "string", description: "Path to the image file" },
         quality: { type: "number", description: "Output quality 1-100 (default: 80)" },
         max_dimension: { type: "number", description: "Max width/height in pixels" },
+        retention_hours: { type: "number", description: "File retention in hours (default: 24, max based on tier)" },
       },
       required: ["file_path"],
     },
@@ -501,6 +506,7 @@ const TOOLS: Tool[] = [
         preset: { type: "string", description: "Encoding preset: ultrafast, fast, medium, slow, veryslow" },
         max_resolution: { type: "string", description: "Max resolution (e.g., '1920x1080', '720p')" },
         remove_audio: { type: "boolean", description: "Remove audio track" },
+        retention_hours: { type: "number", description: "File retention in hours (default: 24, max based on tier)" },
       },
       required: ["file_path"],
     },
@@ -514,6 +520,7 @@ const TOOLS: Tool[] = [
       properties: {
         file_path: { type: "string", description: "Path to the PDF file" },
         quality: { type: "string", description: "Compression quality: low, medium, high (default: medium)" },
+        retention_hours: { type: "number", description: "File retention in hours (default: 24, max based on tier)" },
       },
       required: ["file_path"],
     },
@@ -545,6 +552,7 @@ const TOOLS: Tool[] = [
         output_format: { type: "string", description: "Archive format: zip, tar, tar.gz, tar.bz2, 7z (default: zip)" },
         archive_name: { type: "string", description: "Output filename (default: archive)" },
         compression_level: { type: "number", description: "Compression level 1-9 (default: 6)" },
+        retention_hours: { type: "number", description: "File retention in hours (default: 24, max based on tier)" },
       },
       required: ["file_paths"],
     },
@@ -1433,6 +1441,7 @@ class ConvertEverythingServer {
     const options: CompressionOptions = {};
     if (parsed.quality !== undefined) options.quality = parsed.quality;
     if (parsed.max_dimension !== undefined) options.max_dimension = parsed.max_dimension;
+    if (parsed.retention_hours !== undefined) options.retention_hours = parsed.retention_hours;
 
     const result = await client.compressImage(parsed.file_path, options);
 
@@ -1443,6 +1452,7 @@ class ConvertEverythingServer {
       `  File: ${result.original_filename}\n` +
       (parsed.quality !== undefined ? `  Quality: ${parsed.quality}%\n` : "") +
       (parsed.max_dimension !== undefined ? `  Max dimension: ${parsed.max_dimension}px\n` : "") +
+      (parsed.retention_hours !== undefined ? `  Retention: ${parsed.retention_hours} hours\n` : "") +
       `\nUse wait_for_conversion to wait for completion.`;
 
     return { content: [{ type: "text" as const, text }] };
@@ -1457,6 +1467,7 @@ class ConvertEverythingServer {
     if (parsed.preset) options.preset = parsed.preset;
     if (parsed.max_resolution) options.max_resolution = parsed.max_resolution;
     if (parsed.remove_audio !== undefined) options.remove_audio = parsed.remove_audio;
+    if (parsed.retention_hours !== undefined) options.retention_hours = parsed.retention_hours;
 
     const result = await client.compressVideo(parsed.file_path, options);
 
@@ -1469,6 +1480,7 @@ class ConvertEverythingServer {
       (parsed.preset ? `  Preset: ${parsed.preset}\n` : "") +
       (parsed.max_resolution ? `  Max resolution: ${parsed.max_resolution}\n` : "") +
       (parsed.remove_audio ? `  Audio: removed\n` : "") +
+      (parsed.retention_hours !== undefined ? `  Retention: ${parsed.retention_hours} hours\n` : "") +
       `\nUse wait_for_conversion to wait for completion.`;
 
     return { content: [{ type: "text" as const, text }] };
@@ -1478,7 +1490,7 @@ class ConvertEverythingServer {
     const parsed = CompressPdfSchema.parse(args);
     const client = this.getClient();
 
-    const result = await client.compressPdf(parsed.file_path, parsed.quality);
+    const result = await client.compressPdf(parsed.file_path, parsed.quality, parsed.retention_hours);
 
     const text =
       `PDF compression started:\n` +
@@ -1486,6 +1498,7 @@ class ConvertEverythingServer {
       `  Status: ${result.status}\n` +
       `  File: ${result.original_filename}\n` +
       (parsed.quality ? `  Quality: ${parsed.quality}\n` : "") +
+      (parsed.retention_hours !== undefined ? `  Retention: ${parsed.retention_hours} hours\n` : "") +
       `\nUse wait_for_conversion to wait for completion.`;
 
     return { content: [{ type: "text" as const, text }] };
@@ -1525,6 +1538,7 @@ class ConvertEverythingServer {
     if (parsed.output_format) options.output_format = parsed.output_format;
     if (parsed.archive_name) options.archive_name = parsed.archive_name;
     if (parsed.compression_level !== undefined) options.compression_level = parsed.compression_level;
+    if (parsed.retention_hours !== undefined) options.retention_hours = parsed.retention_hours;
 
     const result = await client.createArchive(parsed.file_paths, options);
 
@@ -1535,6 +1549,7 @@ class ConvertEverythingServer {
       `  Files: ${parsed.file_paths.length}\n` +
       `  Format: ${parsed.output_format || "zip"}\n` +
       (parsed.archive_name ? `  Name: ${parsed.archive_name}\n` : "") +
+      (parsed.retention_hours !== undefined ? `  Retention: ${parsed.retention_hours} hours\n` : "") +
       `\nUse wait_for_conversion to wait for completion.`;
 
     return { content: [{ type: "text" as const, text }] };

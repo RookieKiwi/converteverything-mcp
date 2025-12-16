@@ -235,6 +235,7 @@ export interface CompressionOptions {
   preset?: string;          // Video encoding preset
   max_resolution?: string;  // Video max resolution (e.g., "1920x1080", "720p")
   remove_audio?: boolean;   // Remove audio from video
+  retention_hours?: number; // File retention in hours (default 24, max based on tier)
 }
 
 export interface CompressionUsageResponse {
@@ -252,6 +253,7 @@ export interface ArchiveOptions {
   output_format?: "zip" | "tar" | "tar.gz" | "tar.bz2" | "7z";
   archive_name?: string;
   compression_level?: number;  // 1-9
+  retention_hours?: number;    // File retention in hours (default 24, max based on tier)
 }
 
 // ============================================================================
