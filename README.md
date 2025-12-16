@@ -69,6 +69,19 @@ Browse all [audio converters](https://converteverything.io/audio-converters), [v
   - Silver ($9.99/mo): 400 API calls/day
   - Gold ($24.99/mo): Unlimited API calls
 
+### File Retention
+
+Converted files are stored temporarily. Use the `retention_hours` parameter to control how long files are kept:
+
+| Tier | Max Retention |
+|------|---------------|
+| Free/Basic | 24 hours |
+| Bronze | 7 days (168 hours) |
+| Silver | 15 days (360 hours) |
+| Gold | 30 days (720 hours) |
+
+Default retention is 24 hours if not specified.
+
 ## Installation
 
 ### From npm (recommended)
@@ -447,6 +460,7 @@ Claude: [Uses compress_image] Compressed from 5.2 MB to 1.1 MB (79% reduction)
 - `file_path` (required): Path to the image file
 - `quality` (optional): Quality level 1-100 (default: 80)
 - `max_dimension` (optional): Max width/height in pixels
+- `retention_hours` (optional): File retention 1-720 hours (default: 24, max based on tier)
 
 ### `compress_video`
 
@@ -463,6 +477,7 @@ Claude: [Uses compress_video] Compressed from 500 MB to 85 MB
 - `preset` (optional): Speed preset (ultrafast, fast, medium, slow)
 - `max_resolution` (optional): Max resolution (e.g., "1920x1080", "720p")
 - `remove_audio` (optional): Remove audio track
+- `retention_hours` (optional): File retention 1-720 hours (default: 24, max based on tier)
 
 ### `compress_pdf`
 
@@ -475,7 +490,8 @@ Claude: [Uses compress_pdf] Compressed from 25 MB to 3.2 MB
 
 **Parameters:**
 - `file_path` (required): Path to the PDF file
-- `quality` (optional): Quality level 1-100 (default: 80)
+- `quality` (optional): Compression quality: low, medium, high (default: medium)
+- `retention_hours` (optional): File retention 1-720 hours (default: 24, max based on tier)
 
 ### `get_compression_usage`
 
@@ -504,6 +520,7 @@ Claude: [Uses create_archive] Created project.zip with 12 files (45 MB)
 - `output_format` (optional): zip, tar, tar.gz, tar.bz2, or 7z (default: zip)
 - `archive_name` (optional): Custom name for the archive
 - `compression_level` (optional): 1-9 (default: 6)
+- `retention_hours` (optional): File retention 1-720 hours (default: 24, max based on tier)
 
 ---
 
