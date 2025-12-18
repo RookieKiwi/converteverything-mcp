@@ -38,7 +38,7 @@ export interface WaitOptions {
 }
 
 // Package version for User-Agent
-const CLIENT_VERSION = "2.1.0";
+const CLIENT_VERSION = "2.1.2";
 
 // Retry configuration
 const DEFAULT_MAX_RETRIES = 3;
