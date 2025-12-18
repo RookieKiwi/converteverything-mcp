@@ -47,7 +47,7 @@ import {
 // Package Info
 // ============================================================================
 
-const PACKAGE_VERSION = "2.1.2";
+const PACKAGE_VERSION = "2.1.3";
 const PACKAGE_NAME = "converteverything-mcp";
 
 // ============================================================================
