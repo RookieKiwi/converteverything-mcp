@@ -53,6 +53,31 @@ const CHUNKED_UPLOAD_THRESHOLD = 30 * 1024 * 1024; // 30MB - use chunked upload 
 const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB chunks
 const DEFAULT_PARALLEL_UPLOADS = 3; // Number of parallel chunk uploads
 
+// Shared MIME type mapping for all file operations
+const MIME_TYPES: Record<string, string> = {
+  // Audio
+  mp3: "audio/mpeg", wav: "audio/wav", flac: "audio/flac", aac: "audio/aac",
+  ogg: "audio/ogg", m4a: "audio/mp4", m4b: "audio/mp4", wma: "audio/x-ms-wma",
+  // Video
+  mp4: "video/mp4", avi: "video/x-msvideo", mkv: "video/x-matroska",
+  mov: "video/quicktime", webm: "video/webm", wmv: "video/x-ms-wmv",
+  // Image
+  jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif",
+  webp: "image/webp", bmp: "image/bmp", svg: "image/svg+xml", ico: "image/x-icon",
+  heic: "image/heic", tiff: "image/tiff", tif: "image/tiff",
+  // Document
+  pdf: "application/pdf",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  doc: "application/msword",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  xls: "application/vnd.ms-excel", txt: "text/plain", html: "text/html", md: "text/markdown",
+  // Data
+  json: "application/json", csv: "text/csv", xml: "application/xml", yaml: "application/x-yaml",
+  // Archive
+  zip: "application/zip", tar: "application/x-tar", gz: "application/gzip",
+  "7z": "application/x-7z-compressed", rar: "application/vnd.rar",
+};
+
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
@@ -101,7 +126,7 @@ export class ConvertEverythingClient {
     this.apiKey = config.apiKey;
     this.baseUrl = this.sanitizeUrl(config.baseUrl || DEFAULT_BASE_URL);
     this.timeout = config.timeout || DEFAULT_TIMEOUT;
-    this.userAgent = `converteverything-mcp/${CLIENT_VERSION} (Node.js)`;
+    this.userAgent = `ConvertEverything-MCP/${CLIENT_VERSION} (Node.js)`;
     this.maxRetries = DEFAULT_MAX_RETRIES;
   }
 
@@ -606,31 +631,11 @@ export class ConvertEverythingClient {
     const filename = path.basename(realPath);
     const ext = path.extname(filename).toLowerCase().replace(".", "");
 
-    // Mime type mapping for common formats
-    const mimeTypes: Record<string, string> = {
-      // Audio
-      mp3: "audio/mpeg", wav: "audio/wav", flac: "audio/flac", aac: "audio/aac",
-      ogg: "audio/ogg", m4a: "audio/mp4", wma: "audio/x-ms-wma",
-      // Video
-      mp4: "video/mp4", avi: "video/x-msvideo", mkv: "video/x-matroska",
-      mov: "video/quicktime", webm: "video/webm", wmv: "video/x-ms-wmv",
-      // Image
-      jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif",
-      webp: "image/webp", bmp: "image/bmp", svg: "image/svg+xml", ico: "image/x-icon",
-      heic: "image/heic", tiff: "image/tiff", tif: "image/tiff",
-      // Document
-      pdf: "application/pdf", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      doc: "application/msword", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      xls: "application/vnd.ms-excel", txt: "text/plain", html: "text/html", md: "text/markdown",
-      // Data
-      json: "application/json", csv: "text/csv", xml: "application/xml", yaml: "application/x-yaml",
-    };
-
     return {
       filename,
       size: stats.size,
       format: ext,
-      mimeType: mimeTypes[ext] || "application/octet-stream",
+      mimeType: MIME_TYPES[ext] || "application/octet-stream",
     };
   }
 
@@ -1201,9 +1206,9 @@ export class ConvertEverythingClient {
 
     const { upload_id, total_chunks } = initResponse;
 
-    // Upload chunks in parallel
+    // Upload chunks in parallel with concurrency control
     const chunkPromises: Promise<ChunkUploadResult>[] = [];
-    const activeUploads: Promise<ChunkUploadResult>[] = [];
+    const activeUploads = new Set<Promise<ChunkUploadResult>>();
 
     for (let chunkNumber = 0; chunkNumber < total_chunks; chunkNumber++) {
       const start = chunkNumber * CHUNK_SIZE;
@@ -1229,26 +1234,15 @@ export class ConvertEverythingClient {
         });
       };
 
-      // Add to active uploads, respecting parallelism limit
+      // Start upload and track with auto-removal on completion
       const promise = uploadChunk();
+      const tracked = promise.finally(() => activeUploads.delete(tracked));
       chunkPromises.push(promise);
-      activeUploads.push(promise);
+      activeUploads.add(tracked);
 
-      // If we've reached the parallel limit, wait for one to complete
-      if (activeUploads.length >= DEFAULT_PARALLEL_UPLOADS) {
+      // If at concurrency limit, wait for one to complete
+      if (activeUploads.size >= DEFAULT_PARALLEL_UPLOADS) {
         await Promise.race(activeUploads);
-        // Remove completed promises
-        for (let i = activeUploads.length - 1; i >= 0; i--) {
-          const p = activeUploads[i];
-          // Check if promise is settled using Promise.race with a resolved promise
-          const settled = await Promise.race([
-            p.then(() => true).catch(() => true),
-            Promise.resolve(false),
-          ]);
-          if (settled) {
-            activeUploads.splice(i, 1);
-          }
-        }
       }
     }
 
@@ -1273,30 +1267,7 @@ export class ConvertEverythingClient {
    */
   private getMimeType(filename: string): string | null {
     const ext = path.extname(filename).toLowerCase().replace(".", "");
-    const mimeTypes: Record<string, string> = {
-      // Audio
-      mp3: "audio/mpeg", wav: "audio/wav", flac: "audio/flac", aac: "audio/aac",
-      ogg: "audio/ogg", m4a: "audio/mp4", wma: "audio/x-ms-wma",
-      // Video
-      mp4: "video/mp4", avi: "video/x-msvideo", mkv: "video/x-matroska",
-      mov: "video/quicktime", webm: "video/webm", wmv: "video/x-ms-wmv",
-      // Image
-      jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif",
-      webp: "image/webp", bmp: "image/bmp", svg: "image/svg+xml", ico: "image/x-icon",
-      heic: "image/heic", tiff: "image/tiff", tif: "image/tiff",
-      // Document
-      pdf: "application/pdf",
-      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      doc: "application/msword",
-      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      xls: "application/vnd.ms-excel", txt: "text/plain", html: "text/html", md: "text/markdown",
-      // Data
-      json: "application/json", csv: "text/csv", xml: "application/xml", yaml: "application/x-yaml",
-      // Archive
-      zip: "application/zip", tar: "application/x-tar", gz: "application/gzip",
-      "7z": "application/x-7z-compressed",
-    };
-    return mimeTypes[ext] || null;
+    return MIME_TYPES[ext] || null;
   }
 
   /**

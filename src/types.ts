@@ -395,10 +395,10 @@ export const FORMAT_CATEGORY_DESCRIPTIONS: Record<FormatCategory, string> = {
 };
 
 export const FORMAT_CATEGORIES: Record<string, FormatCategory> = {
-  // Audio (15 formats)
+  // Audio (16 formats)
   mp3: "audio", wav: "audio", flac: "audio", aac: "audio", ogg: "audio",
-  ogx: "audio", m4a: "audio", wma: "audio", aiff: "audio", midi: "audio",
-  mid: "audio", opus: "audio", ac3: "audio", amr: "audio", ape: "audio",
+  ogx: "audio", m4a: "audio", m4b: "audio", wma: "audio", aiff: "audio",
+  midi: "audio", mid: "audio", opus: "audio", ac3: "audio", amr: "audio", ape: "audio",
   // Video (15 formats)
   mp4: "video", avi: "video", mkv: "video", mov: "video", webm: "video",
   wmv: "video", flv: "video", m4v: "video", "3gp": "video", ts: "video",

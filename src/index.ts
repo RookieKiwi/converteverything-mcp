@@ -47,7 +47,7 @@ import {
 // Package Info
 // ============================================================================
 
-const PACKAGE_VERSION = "2.0.0";
+const PACKAGE_VERSION = "2.1.1";
 const PACKAGE_NAME = "converteverything-mcp";
 
 // ============================================================================
@@ -1147,6 +1147,16 @@ class ConvertEverythingServer {
     return resolvedOptions;
   }
 
+  /**
+   * Format bytes into human-readable string (KB, MB, GB)
+   */
+  private formatBytes(bytes: number): string {
+    if (bytes < 1024) return `${bytes} bytes`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+    return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+  }
+
   private async handleConvertFile(args: unknown) {
     const parsed = ConvertFileSchema.parse(args);
     const client = this.getClient();
@@ -1386,18 +1396,10 @@ class ConvertEverythingServer {
 
     const info = await client.getFileInfo(parsed.file_path);
 
-    const sizeFormatted = info.size < 1024
-      ? `${info.size} bytes`
-      : info.size < 1024 * 1024
-        ? `${(info.size / 1024).toFixed(1)} KB`
-        : info.size < 1024 * 1024 * 1024
-          ? `${(info.size / 1024 / 1024).toFixed(1)} MB`
-          : `${(info.size / 1024 / 1024 / 1024).toFixed(2)} GB`;
-
     const text =
       `File Information:\n` +
       `  Name: ${info.filename}\n` +
-      `  Size: ${sizeFormatted} (${info.size} bytes)\n` +
+      `  Size: ${this.formatBytes(info.size)} (${info.size} bytes)\n` +
       `  Format: ${info.format.toUpperCase()}\n` +
       `  MIME Type: ${info.mimeType}`;
 
@@ -1412,18 +1414,11 @@ class ConvertEverythingServer {
     const options = this.resolveOptions(parsed.target_format, parsed.preset, parsed.options);
     const estimate = client.estimateOutputSize(info.size, info.format, parsed.target_format, options);
 
-    const formatSize = (size: number) => {
-      if (size < 1024) return `${size} bytes`;
-      if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
-      if (size < 1024 * 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)} MB`;
-      return `${(size / 1024 / 1024 / 1024).toFixed(2)} GB`;
-    };
-
     const text =
       `Output Size Estimate:\n` +
-      `  Input: ${formatSize(info.size)} (${info.format.toUpperCase()})\n` +
+      `  Input: ${this.formatBytes(info.size)} (${info.format.toUpperCase()})\n` +
       `  Target: ${parsed.target_format.toUpperCase()}\n` +
-      `  Estimated Output: ${formatSize(estimate.estimatedSize)}\n` +
+      `  Estimated Output: ${this.formatBytes(estimate.estimatedSize)}\n` +
       `  Confidence: ${estimate.confidence}\n` +
       (estimate.notes ? `  Notes: ${estimate.notes}` : "");
 
