@@ -48,7 +48,7 @@ Browse all [audio converters](https://converteverything.io/audio-converters), [v
 
 | Category | Formats |
 |----------|---------|
-| **Audio** (15) | mp3, wav, flac, aac, ogg, ogx, m4a, wma, aiff, midi, mid, opus, ac3, amr, ape |
+| **Audio** (16) | mp3, wav, flac, aac, ogg, ogx, m4a, m4b, wma, aiff, midi, mid, opus, ac3, amr, ape |
 | **Video** (15) | mp4, avi, mkv, mov, webm, wmv, flv, m4v, 3gp, ts, vob, mts, mpeg, m2ts, divx |
 | **Image** (25) | jpg, jpeg, png, gif, webp, bmp, tiff, svg, ico, prn, heic, heif, avif, + RAW formats |
 | **RAW Camera** | cr2, cr3, nef, nrw, arw, orf, rw2, raf, dng, pef, raw (read-only input) |
@@ -836,6 +836,23 @@ Claude: [Uses get_supported_formats]
 You can convert to these video formats: mp4, avi, mkv, mov, webm, wmv, flv, m4v, 3gp, ts, vob, mts, mpeg, m2ts, divx
 ```
 
+## Large File Handling
+
+As of version 2.1.0, the MCP server automatically handles large files using **chunked uploads**:
+
+- **Files > 30MB** are automatically split into 10MB chunks
+- **Parallel uploads** (3 concurrent) for faster transfer speeds
+- **Better reliability** - failed chunks can be retried without restarting the entire upload
+- **Memory efficient** - only one chunk is loaded into memory at a time
+
+This is transparent to users - just use `convert_file` as normal and the server handles the rest.
+
+```
+User: Convert my 500MB video to MP4
+Claude: [Uses convert_file - automatically uses chunked upload for large files]
+Starting conversion... (uploading in 50 chunks)
+```
+
 ## Security
 
 This MCP server:
@@ -845,6 +862,7 @@ This MCP server:
 - Sanitizes filenames before upload
 - Uses HTTPS for all API communication
 - Does not store any files or credentials
+- Uses chunked uploads for large files (>30MB) for reliability
 
 Your files are:
 - Encrypted in transit (HTTPS/TLS)

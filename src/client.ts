@@ -38,7 +38,7 @@ export interface WaitOptions {
 }
 
 // Package version for User-Agent
-const CLIENT_VERSION = "1.2.0";
+const CLIENT_VERSION = "2.1.0";
 
 // Retry configuration
 const DEFAULT_MAX_RETRIES = 3;
@@ -48,9 +48,33 @@ const RETRYABLE_STATUS_CODES = [408, 429, 500, 502, 503, 504];
 // Cache configuration
 const FORMAT_CACHE_TTL = 3600000; // 1 hour
 
+// Chunked upload configuration
+const CHUNKED_UPLOAD_THRESHOLD = 30 * 1024 * 1024; // 30MB - use chunked upload for larger files
+const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB chunks
+const DEFAULT_PARALLEL_UPLOADS = 3; // Number of parallel chunk uploads
+
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
+}
+
+interface ChunkedInitResponse {
+  upload_id: string;
+  chunk_size: number;
+  total_chunks: number;
+  expires_at: string;
+  max_size: number;
+}
+
+interface ChunkUploadResult {
+  status: string;
+  chunk_number: number;
+}
+
+interface ChunkedCompleteResponse {
+  status: string;
+  upload_id: string;
+  file_size: number;
 }
 
 export class ConvertEverythingClient {
@@ -329,7 +353,8 @@ export class ConvertEverythingClient {
   }
 
   /**
-   * Convert a file from a local path
+   * Convert a file from a local path.
+   * Automatically uses chunked upload for files >30MB for better reliability.
    */
   async convertFile(
     filePath: string,
@@ -348,7 +373,15 @@ export class ConvertEverythingClient {
       );
     }
 
-    // Read file
+    // Check file size for chunked upload
+    const stats = fs.statSync(realPath);
+    if (this.shouldUseChunkedUpload(stats.size)) {
+      // Use chunked upload for large files
+      const uploadId = await this.uploadFileChunked(realPath);
+      return this.convertFileFromUpload(uploadId, normalizedFormat, options);
+    }
+
+    // For smaller files, use direct upload
     const fileBuffer = fs.readFileSync(realPath);
     const fileName = path.basename(realPath);
 
@@ -1129,5 +1162,179 @@ export class ConvertEverythingClient {
     }
 
     return name;
+  }
+
+  // ==========================================================================
+  // Chunked Upload Methods (for large files >30MB)
+  // ==========================================================================
+
+  /**
+   * Upload a large file using chunked upload for better reliability.
+   * Files >30MB are automatically chunked into 10MB parts and uploaded in parallel.
+   *
+   * @param filePath - Path to the file to upload
+   * @param contentType - MIME type of the file
+   * @returns upload_id to use with conversion endpoints
+   */
+  async uploadFileChunked(
+    filePath: string,
+    contentType?: string
+  ): Promise<string> {
+    const realPath = this.validateFilePath(filePath);
+    const fileName = path.basename(realPath);
+    const stats = fs.statSync(realPath);
+    const fileSize = stats.size;
+
+    // Determine content type
+    const mimeType = contentType || this.getMimeType(fileName) || "application/octet-stream";
+
+    // Initialize chunked upload
+    const initFormData = new FormData();
+    initFormData.append("filename", this.sanitizeFilename(fileName));
+    initFormData.append("content_type", mimeType);
+    initFormData.append("file_size", fileSize.toString());
+
+    const initResponse = await this.request<ChunkedInitResponse>("/upload/chunk/init", {
+      method: "POST",
+      body: initFormData,
+    });
+
+    const { upload_id, total_chunks } = initResponse;
+
+    // Upload chunks in parallel
+    const chunkPromises: Promise<ChunkUploadResult>[] = [];
+    const activeUploads: Promise<ChunkUploadResult>[] = [];
+
+    for (let chunkNumber = 0; chunkNumber < total_chunks; chunkNumber++) {
+      const start = chunkNumber * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, fileSize);
+
+      // Create a promise for this chunk
+      const uploadChunk = async (): Promise<ChunkUploadResult> => {
+        // Read chunk from file
+        const fd = fs.openSync(realPath, "r");
+        const chunkBuffer = Buffer.alloc(end - start);
+        fs.readSync(fd, chunkBuffer, 0, end - start, start);
+        fs.closeSync(fd);
+
+        const chunkFormData = new FormData();
+        chunkFormData.append("upload_id", upload_id);
+        chunkFormData.append("chunk_number", chunkNumber.toString());
+        const chunkBlob = new Blob([chunkBuffer]);
+        chunkFormData.append("chunk", chunkBlob, `chunk_${chunkNumber}`);
+
+        return this.request<ChunkUploadResult>("/upload/chunk", {
+          method: "POST",
+          body: chunkFormData,
+        });
+      };
+
+      // Add to active uploads, respecting parallelism limit
+      const promise = uploadChunk();
+      chunkPromises.push(promise);
+      activeUploads.push(promise);
+
+      // If we've reached the parallel limit, wait for one to complete
+      if (activeUploads.length >= DEFAULT_PARALLEL_UPLOADS) {
+        await Promise.race(activeUploads);
+        // Remove completed promises
+        for (let i = activeUploads.length - 1; i >= 0; i--) {
+          const p = activeUploads[i];
+          // Check if promise is settled using Promise.race with a resolved promise
+          const settled = await Promise.race([
+            p.then(() => true).catch(() => true),
+            Promise.resolve(false),
+          ]);
+          if (settled) {
+            activeUploads.splice(i, 1);
+          }
+        }
+      }
+    }
+
+    // Wait for all chunks to complete
+    await Promise.all(chunkPromises);
+
+    // Complete the upload
+    const completeFormData = new FormData();
+    completeFormData.append("upload_id", upload_id);
+    completeFormData.append("total_chunks", total_chunks.toString());
+
+    await this.request<ChunkedCompleteResponse>("/upload/chunk/complete", {
+      method: "POST",
+      body: completeFormData,
+    });
+
+    return upload_id;
+  }
+
+  /**
+   * Get MIME type for a file based on extension
+   */
+  private getMimeType(filename: string): string | null {
+    const ext = path.extname(filename).toLowerCase().replace(".", "");
+    const mimeTypes: Record<string, string> = {
+      // Audio
+      mp3: "audio/mpeg", wav: "audio/wav", flac: "audio/flac", aac: "audio/aac",
+      ogg: "audio/ogg", m4a: "audio/mp4", wma: "audio/x-ms-wma",
+      // Video
+      mp4: "video/mp4", avi: "video/x-msvideo", mkv: "video/x-matroska",
+      mov: "video/quicktime", webm: "video/webm", wmv: "video/x-ms-wmv",
+      // Image
+      jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif",
+      webp: "image/webp", bmp: "image/bmp", svg: "image/svg+xml", ico: "image/x-icon",
+      heic: "image/heic", tiff: "image/tiff", tif: "image/tiff",
+      // Document
+      pdf: "application/pdf",
+      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      doc: "application/msword",
+      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      xls: "application/vnd.ms-excel", txt: "text/plain", html: "text/html", md: "text/markdown",
+      // Data
+      json: "application/json", csv: "text/csv", xml: "application/xml", yaml: "application/x-yaml",
+      // Archive
+      zip: "application/zip", tar: "application/x-tar", gz: "application/gzip",
+      "7z": "application/x-7z-compressed",
+    };
+    return mimeTypes[ext] || null;
+  }
+
+  /**
+   * Convert a file using a pre-uploaded upload_id (for files >30MB)
+   * This version uses chunked upload for better memory efficiency and reliability.
+   */
+  async convertFileFromUpload(
+    uploadId: string,
+    targetFormat: string,
+    options?: ConversionOptions
+  ): Promise<ConversionResponse> {
+    const normalizedFormat = targetFormat.toLowerCase().replace(/^\./, "");
+    if (!isFormatSupported(normalizedFormat)) {
+      throw new Error(
+        `Unsupported target format: ${targetFormat}. ` +
+        "Use get_supported_formats to see available formats."
+      );
+    }
+
+    // Use form data with upload_id instead of file
+    const formData = new FormData();
+    formData.append("upload_id", uploadId);
+    formData.append("output_format", normalizedFormat);
+
+    if (options && Object.keys(options).length > 0) {
+      formData.append("options", JSON.stringify(options));
+    }
+
+    return this.request<ConversionResponse>("/convert", {
+      method: "POST",
+      body: formData,
+    });
+  }
+
+  /**
+   * Check if a file should use chunked upload based on size
+   */
+  shouldUseChunkedUpload(fileSize: number): boolean {
+    return fileSize > CHUNKED_UPLOAD_THRESHOLD;
   }
 }
